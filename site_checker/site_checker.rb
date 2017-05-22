@@ -29,10 +29,6 @@ class SiteChecker
       end
   end
 
-  def interval
-    @interval ||= ENV['INTERVAL'] ? ENV['INTERVAL'].to_i : 60
-  end
-
   def slack_webhook_uri
     ENV['SLACK_WEBHOOK']
   end
@@ -102,7 +98,7 @@ class SiteChecker
   end
 end
 
-checker = SiteChecker.new interval: 6
+checker = SiteChecker.new interval: 60
 
 checker.add_site(name: 'yodobashi スプラトゥーン2セット', uri: 'http://www.yodobashi.com/product/100000001003570628/') do |page|
   page.css('#js_buyBoxMain .salesInfo p').first.text
