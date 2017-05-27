@@ -71,9 +71,10 @@ class SiteChecker
     page = retry_eb { agent.get site[:uri] }
     result = site[:block].call page
     last_result = @last_results[name]
-    if last_result && result != last_result
-      slack_post "#{name} #{result}"
-      logger.info "[#{name}] #{last_result} -> #{result}"
+    if result != last_result
+      msg = "[#{name}] #{last_result} -> #{result}\n#{site[:uri]}"
+      slack_post msg
+      logger.info msg
       @last_results[name] = result
     else
       logger.debug "[#{name}] #{result} (not changed)"
@@ -104,13 +105,13 @@ Dotenv.load
 checker = SiteChecker.new interval: 60
 
 checker.add_site(name: 'yodobashi スプラトゥーン2セット', uri: 'http://www.yodobashi.com/product/100000001003570628/') do |page|
-  page.css('#js_buyBoxMain .salesInfo p').first.text
+  page.css('#js_buyBoxMain .salesInfo p').text
 end
 checker.add_site(name: 'yodobashi ネオン', uri: 'http://www.yodobashi.com/product/100000001003431566/') do |page|
-  page.css('#js_buyBoxMain .salesInfo p').first.text
+  page.css('#js_buyBoxMain .salesInfo p').text
 end
 checker.add_site(name: 'yodobashi グレー', uri: 'http://www.yodobashi.com/product/100000001003431565/') do |page|
-  page.css('#js_buyBoxMain .salesInfo p').first.text
+  page.css('#js_buyBoxMain .salesInfo p').text
 end
 checker.add_site(name: 'My Nintendo カスタム本体', uri: 'https://store.nintendo.co.jp/customize.html') do |page|
   stock = nil
