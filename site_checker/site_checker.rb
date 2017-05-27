@@ -75,12 +75,12 @@ class SiteChecker
     result = site[:block].call page
     last_result = @last_results[name]
     if result != last_result
-      msg = "[#{name}] #{last_result} -> #{result}\n#{site[:uri]}"
+      msg = "[#{name}] #{last_result.inspect} -> #{result.inspect}\n#{site[:uri]}"
       slack_post msg
       logger.info msg
       @last_results[name] = result
     else
-      logger.debug "[#{name}] #{result} (not changed)"
+      logger.debug "[#{name}] #{result.inspect} (not changed)"
     end
   rescue => e
     msg = "#{e} (#{e.class}):\n  #{e.backtrace.join("\n  ")}"
@@ -142,5 +142,20 @@ checker.add_site(name: 'My Nintendo カスタム本体', uri: 'https://store.nin
     end
   end
   "在庫: #{stock}"
+end
+checker.add_site(name: 'joshinweb グレー', uri: 'http://joshinweb.jp/game/40518/4902370535709.html') do |page|
+  page.css('form[name="cart_button"]').text
+end
+checker.add_site(name: 'joshinweb ネオン', uri: 'http://joshinweb.jp/game/40518/4902370535716.html') do |page|
+  page.css('form[name="cart_button"]').text
+end
+checker.add_site(name: '7net スプラトゥーン2セット', uri: 'http://7net.omni7.jp/detail/2110599526') do |page|
+  page.css('.cartBtn input[type="submit"]')&.first&.attr('value')
+end
+checker.add_site(name: '7net グレー', uri: 'http://7net.omni7.jp/detail/2110596901') do |page|
+  page.css('.cartBtn input[type="submit"]')&.first&.attr('value')
+end
+checker.add_site(name: '7net ネオン', uri: 'http://7net.omni7.jp/detail/2110595637') do |page|
+  page.css('.cartBtn input[type="submit"]')&.first&.attr('value')
 end
 checker.start
