@@ -7,19 +7,22 @@ require 'socket'
 require 'mechanize'
 require 'logger'
 require 'dotenv'
+require 'optparse'
 
 class SiteChecker
-  def initialize(interval: 60)
+  def initialize(interval: 60, log_path: nil)
     @sites = {}
     @last_results = {}
     @interval = interval
+    @log_path = log_path
   end
 
   def logger
     @logger ||=
       begin
-        $stdout.sync = 1
-        Logger.new($stdout)
+        logdev = @log_path ? open(@log_path, 'a') : $stdout
+        logdev.sync = 1
+        Logger.new(logdev)
       end
   end
 
@@ -102,7 +105,23 @@ end
 
 Dotenv.load
 
-checker = SiteChecker.new interval: 60
+options = { interval: 60 }
+OptionParser.new do |o|
+  o.banner = "Usage: #{$0} [options]"
+
+  o.on('-o PATH', 'path to a log file') do |path|
+    options[:log_path] = path
+  end
+  o.on('-i INTERVAL', 'interval') do |interval|
+    options[:interval] = interval.to_i
+  end
+  o.on('-h', '--help', 'show usage') do
+    puts o
+    exit
+  end
+end.parse!
+
+checker = SiteChecker.new options
 
 checker.add_site(name: 'yodobashi スプラトゥーン2セット', uri: 'http://www.yodobashi.com/product/100000001003570628/') do |page|
   page.css('#js_buyBoxMain .salesInfo p').text
