@@ -6,6 +6,7 @@ require 'json'
 require 'socket'
 require 'mechanize'
 require 'logger'
+require 'dotenv'
 
 class SiteChecker
   def initialize(interval: 60)
@@ -97,6 +98,8 @@ class SiteChecker
     slack_post "[error] #{msg}"
   end
 end
+
+Dotenv.load
 
 checker = SiteChecker.new interval: 60
 
