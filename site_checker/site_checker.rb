@@ -143,12 +143,12 @@ checker.add_site(name: 'My Nintendo カスタム本体', uri: 'https://store.nin
   end
   "在庫: #{stock}"
 end
-checker.add_site(name: 'joshinweb グレー', uri: 'http://joshinweb.jp/game/40518/4902370535709.html') do |page|
-  page.css('form[name="cart_button"]').text
-end
-checker.add_site(name: 'joshinweb ネオン', uri: 'http://joshinweb.jp/game/40518/4902370535716.html') do |page|
-  page.css('form[name="cart_button"]').text
-end
+#checker.add_site(name: 'joshinweb グレー', uri: 'http://joshinweb.jp/game/40518/4902370535709.html') do |page|
+#  page.css('form[name="cart_button"]').text
+#end
+#checker.add_site(name: 'joshinweb ネオン', uri: 'http://joshinweb.jp/game/40518/4902370535716.html') do |page|
+#  page.css('form[name="cart_button"]').text
+#end
 checker.add_site(name: '7net スプラトゥーン2セット', uri: 'http://7net.omni7.jp/detail/2110599526') do |page|
   page.css('.cartBtn input[type="submit"]')&.first&.attr('value')
 end
