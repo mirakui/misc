@@ -1,5 +1,6 @@
 require 'geocoder'
 require 'yaml'
+require 'dotenv'
 
 class GeoCache
   CACHE_PATH = '.geocoder_cache'
@@ -30,33 +31,49 @@ class GeoCache
   end
 end
 
-def geo_search(addr)
-  @geo_cache ||= GeoCache.new
-  cached_geom = @geo_cache.get(addr)
-  if cached_geom
-    cached_geom
-  else
-    geom = Geocoder.search(addr).first.geometry
-    @geo_cache.set addr, geom
-    geom
+class GeoSearcher
+  def initialize
+    @geo_cache = GeoCache.new
+    Dotenv.load
+    ::Geocoder.configure(
+      use_https: true,
+      api_key: ENV['GOOGLE_MAPS_API_KEY']
+    )
   end
-end
 
-def calc_distance(addr0, addr1)
-  geoms = []
-  geoms[0] = geo_search addr0
-  geoms[1] = geo_search addr1
-  latlngs = geoms.map do |l|
-    geo = l['location']
-    [geo['lat'], geo['lng']]
+  def search(addr)
+    cached_geom = @geo_cache.get(addr)
+    if cached_geom
+      cached_geom
+    else
+      result = Geocoder.search(addr)
+      raise "Not Found: #{addr}" if result.empty?
+      geom = result.first.geometry
+      @geo_cache.set addr, geom
+      geom
+    end
   end
-  Geocoder::Calculations.distance_between *latlngs, units: :km
+
+  def calc_distance(addr0, addr1)
+    geoms = []
+    geoms[0] = search addr0
+    geoms[1] = search addr1
+    latlngs = geoms.map do |l|
+      geo = l['location']
+      [geo['lat'], geo['lng']]
+    end
+    Geocoder::Calculations.distance_between *latlngs, units: :km
+  end
+
 end
 
 def main
+  searcher = GeoSearcher.new
   while line=gets
     addrs = line.chomp.split("\t")
-    puts calc_distance(*addrs)
+    break if addrs.empty?
+    puts searcher.calc_distance(*addrs)
+    $stdout.flush
   end
 end
 

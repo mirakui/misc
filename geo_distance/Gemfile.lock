@@ -1,12 +1,14 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    dotenv (2.2.1)
     geocoder (1.4.5)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  dotenv
   geocoder
 
 BUNDLED WITH
