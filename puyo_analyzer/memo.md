@@ -16,12 +16,18 @@ $ ffmpeg -i src.mp4 -vf fps=1/600 dst%04d.jpg
 $ ffmpeg -i src.mp4 -ss 00:00:00.000 -t 60 -vf fps=30,scale=w=640:h=360:force_original_aspect_ratio=decrease dst%06d.jpg
 ```
 
+```sh
+$ jupyter lab --ip=0.0.0.0 --no-browser
+```
+
 # youtube examples
 - リアルタイム解説付き！momoken vs くらうど30本先取+α【ぷよぷよeスポーツ】
   - https://www.youtube.com/watch?v=2CIiWb_HRhw
 
 # memo
-```
-1280x720 -> 1/2 -> 640/360 -> 1/2 -> 320/180
-1h -> 60m -> 3,600s -> 216,000f (60fps)
-```
+- 1280x720 -> 1/2 -> 640/360 -> 1/2 -> 320/180
+- 1h -> 60m -> 3,600s -> 216,000f (60fps)
+- 解析は 30fps もあれば十分っぽい
+- 点数に x が出たら連鎖中
+- 試合終了判定は やった！ ばたんきゅー 文字？
+- ネクスト枠を固定で観測して変化が起こったら手が進む
