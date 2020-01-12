@@ -14,11 +14,13 @@ def encode(src_file, dst_path)
 
   identified = `#{FFMPEG_PATH} -i #{src_file} 2>&1`
   creation_time_line = identified.match(/creation_time\s+:\s+([\d\-T:]+)\./)
-  unless creation_time_line
-    $stderr.puts "Cannot extract creation_time from #{src_file}:\n\n#{identified}"
-    exit 1
+  if creation_time_line
+    creation_time = creation_time_line[1]
+  else
+    creation_time = File.mtime(src_file).strftime("%Y-%m-%dT%H:%M:%S")
+    #$stderr.puts "Cannot extract creation_time from #{src_file}:\n\n#{identified}"
+    #exit 1
   end
-  creation_time = creation_time_line[1]
 
   cmd = "#{FFMPEG_PATH} -i #{src_file} #{FFMPEG_ENCODE_OPTIONS} -metadata creation_time=\"#{creation_time}\" #{dst_file}"
   puts cmd
