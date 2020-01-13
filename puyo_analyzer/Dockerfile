@@ -7,6 +7,7 @@ RUN apt install -y libopencv-dev
 RUN pip install youtube-dl
 RUN pip install jupyterlab
 RUN pip install opencv-contrib-python
+RUN pip install matplotlib
 
 RUN useradd -ms /bin/bash mirakui
 USER mirakui
