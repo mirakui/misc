@@ -9,6 +9,9 @@ RUN pip install jupyterlab
 RUN pip install opencv-contrib-python
 RUN pip install matplotlib
 
+RUN apt install -y zsh
+RUN pip install scikit-image
+
 RUN useradd -ms /bin/bash mirakui
 USER mirakui
 WORKDIR /home/mirakui
