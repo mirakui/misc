@@ -10,7 +10,7 @@ def main
   dst_path_prefix = 'dst/puyo-'
   puyo_idx = 0
 
-  0.step(255, 5) do |gray|
+  0.step(255, 50) do |gray|
     puyo_sozai_hnum.times do |h|
       puyo_sozai_vnum.times do |v|
         puyo_sozai_x = h * puyo_width
