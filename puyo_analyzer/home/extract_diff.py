@@ -1,29 +1,48 @@
 import skimage
-from skimage import io, metrics
+import skimage.io
+import skimage.metrics
+import skimage.feature
+import numpy as np
 import glob
 import os
 import shutil
 
 diff_threshold = 0.7
+mt_x_threshold = 0.8
 
+img_x = skimage.color.rgb2gray(skimage.io.imread('img/x.png'))
+img_yatta = skimage.color.rgb2gray(skimage.io.imread('img/yatta.png'))
 src_files = glob.glob('/mnt/vol/30fps-02/dst*.jpg')
 dst_dir = '/mnt/vol/diff/'
 img1 = None
 keyframe_path = None
+is_ren = False
 
 seq_count = 0
 
 for f in sorted(src_files):
     img0 = img1
     img1 = skimage.io.imread(f)
-    img1 = skimage.color.rgb2gray(img1[45:147,232:283])
+    img1 = skimage.color.rgb2gray(img1)
 
     if img0 is None:
         continue
     if keyframe_path is None:
         keyframe_path = f
 
-    (score, diff) = skimage.metrics.structural_similarity(img0, img1, full=True)
+    mt_x_result = skimage.feature.match_template(img1[294:314, 116:225], img_x)
+    mt_x_score = np.max(mt_x_result)
+    if mt_x_score >= mt_x_threshold:
+        if not is_ren:
+            print('Ren: ', f, mt_x_score)
+            basename = os.path.basename(f)
+            dst_path = dst_dir + basename
+            shutil.copy(f, dst_path)
+            is_ren = True
+    else:
+        is_ren = False
+
+    (score, diff) = skimage.metrics.structural_similarity(img0[45:147, 232:283], img1[45:147, 232:283], full=True)
 
     if score <= diff_threshold:
         seq_count += 1
