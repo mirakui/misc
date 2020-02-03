@@ -13,11 +13,16 @@ $ youtube-dl -o [filename] [url]
 # Output one image every ten minutes:
 
 $ ffmpeg -i src.mp4 -vf fps=1/600 dst%04d.jpg
-$ ffmpeg -i src.mp4 -ss 00:00:00.000 -t 60 -vf fps=30,scale=w=640:h=360:force_original_aspect_ratio=decrease dst%06d.jpg
+$ ffmpeg -i src.mp4 -ss 00:00:00.000 -t 60 -q:v 1 -vf fps=30,scale=w=640:h=360:force_original_aspect_ratio=decrease dst%06d.jpg
 ```
 
 ```sh
 $ jupyter lab --ip=0.0.0.0 --no-browser
+```
+
+```sh
+$ opencv_createsamples -info pos/poslist.txt -vec vec/pos.vec -num 1000 -maxidev 40 -maxxangle 0.8 -maxyangle 0.8 -maxzangle 0.5
+$ opencv_traincascade -data cascade -vec vec/pos_puyo.vec -bg neg/neg.list -numPos 150 -numNeg 140
 ```
 
 # youtube examples
@@ -31,3 +36,4 @@ $ jupyter lab --ip=0.0.0.0 --no-browser
 - 点数に x が出たら連鎖中
 - 試合終了判定は やった！ ばたんきゅー 文字？
 - ネクスト枠を固定で観測して変化が起こったら手が進む
+- 連鎖エフェクトが数フレーム x にかぶることがあるので考慮したい
