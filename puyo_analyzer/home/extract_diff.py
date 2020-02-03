@@ -32,23 +32,25 @@ class ThumbnailsAnalyzer:
         img_x = skimage.color.rgb2gray(skimage.io.imread(self.img_x_path))
         img_yatta = skimage.color.rgb2gray(skimage.io.imread(self.img_yatta_path))
 
-        img1 = None
+        img_field1 = None
+        img_field1_gray = None
         is_ren = False
         is_yatta = False
-
-        seq_count = 0
+        tsumo_seq_count = 0
 
         for f in src_files:
-            img0 = img1
-            img1 = skimage.io.imread(f)
-            img1 = skimage.color.rgb2gray(img1)
+            img_field0 = img_field1
+            img_field0_gray = img_field1_gray
+            img_field1 = skimage.io.imread(f) # ツモ順分析のためにカラー版も残しておく
+            img_field1_gray = skimage.color.rgb2gray(img_field1)
             basename = os.path.basename(f)
 
-            if img0 is None:
+            if img_field0 is None:
                 continue
 
+            # "x" が得点領域に表示されていたら連鎖アニメーション中
             mt_x_result = skimage.feature.match_template(
-                self.mt_x_rect.crop(img1),
+                self.mt_x_rect.crop(img_field1_gray),
                 img_x
             )
             mt_x_score = np.max(mt_x_result)
@@ -62,7 +64,8 @@ class ThumbnailsAnalyzer:
             else:
                 is_ren = False
 
-            mt_yatta_result = skimage.feature.match_template(img1, img_yatta)
+            # "やった！" が表示されていたらラウンド終了
+            mt_yatta_result = skimage.feature.match_template(img_field1_gray, img_yatta)
             mt_yatta_score = np.max(mt_yatta_result)
             if mt_yatta_score >= self.mt_yatta_threshold:
                 if not is_yatta:
@@ -73,21 +76,21 @@ class ThumbnailsAnalyzer:
             else:
                 is_yatta = False
 
-            # (score, diff) = skimage.metrics.structural_similarity(img0[45:147, 232:283], img1[45:147, 232:283], full=True)
+            # ネクスト領域で一定フレーム連続して前フレームとの差が大きかったらツモアニメーション中
             (score, diff) = skimage.metrics.structural_similarity(
-                self.mt_tsumo_rect.crop(img0),
-                self.mt_tsumo_rect.crop(img1),
+                self.mt_tsumo_rect.crop(img_field0_gray),
+                self.mt_tsumo_rect.crop(img_field1_gray),
                 full=True
             )
 
             if score <= self.mt_tsumo_threshold:
-                seq_count += 1
-                if seq_count >= self.tsumo_frames_threshold:
+                tsumo_seq_count += 1
+                if tsumo_seq_count >= self.tsumo_frames_threshold:
                     print('Tsumo:', keyframe_path, score)
                     dst_path = dst_dir + os.path.basename(keyframe_path)
                     shutil.copy(keyframe_path, dst_path)
             else:
-                seq_count = 0
+                tsumo_seq_count = 0
                 keyframe_path = f
 
 src_files = sorted(glob.glob('/mnt/vol/30fps-02/dst*.jpg'))
