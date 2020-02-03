@@ -7,6 +7,16 @@ import glob
 import os
 import shutil
 
+class Rect:
+    def __init__(self, y1, y2, x1, x2):
+        self.x1 = x1
+        self.x2 = x2
+        self.y1 = y1
+        self.y2 = y2
+
+    def crop(self, img):
+        return img[self.y1:self.y2, self.x1:self.x2]
+
 class ThumbnailsAnalyzer:
     def __init__(self):
         self.mt_tsumo_threshold = 0.7
@@ -15,6 +25,8 @@ class ThumbnailsAnalyzer:
         self.tsumo_frames_threshold = 4
         self.img_x_path = 'img/x.png'
         self.img_yatta_path = 'img/yatta.png'
+        self.mt_x_rect = Rect(x1=116, x2=225, y1=294, y2=314)
+        self.mt_tsumo_rect = Rect(x1=232, x2=283, y1=45, y2=147)
 
     def analyze(self, src_files, dst_dir):
         img_x = skimage.color.rgb2gray(skimage.io.imread(self.img_x_path))
@@ -35,7 +47,10 @@ class ThumbnailsAnalyzer:
             if img0 is None:
                 continue
 
-            mt_x_result = skimage.feature.match_template(img1[294:314, 116:225], img_x)
+            mt_x_result = skimage.feature.match_template(
+                self.mt_x_rect.crop(img1),
+                img_x
+            )
             mt_x_score = np.max(mt_x_result)
             # print('DEBUG [mt_x_score]', f, mt_x_score)
             if mt_x_score >= self.mt_x_threshold:
@@ -58,7 +73,12 @@ class ThumbnailsAnalyzer:
             else:
                 is_yatta = False
 
-            (score, diff) = skimage.metrics.structural_similarity(img0[45:147, 232:283], img1[45:147, 232:283], full=True)
+            # (score, diff) = skimage.metrics.structural_similarity(img0[45:147, 232:283], img1[45:147, 232:283], full=True)
+            (score, diff) = skimage.metrics.structural_similarity(
+                self.mt_tsumo_rect.crop(img0),
+                self.mt_tsumo_rect.crop(img1),
+                full=True
+            )
 
             if score <= self.mt_tsumo_threshold:
                 seq_count += 1
