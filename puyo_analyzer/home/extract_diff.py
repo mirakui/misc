@@ -45,7 +45,7 @@ class TsumoFrameDetector:
             if self.tsumo_seq_count >= self.tsumo_frames_threshold:
                 print('Tsumo:', self.keyframe_path, score)
                 basename = os.path.basename(self.keyframe_path)
-                shutil.copy(self.keyframe_path, dst_dir + basename)
+                shutil.copy(self.keyframe_path, self.dst_dir + basename)
                 return { 'file': basename, 'type': 'tsumo', 'player': 0 }
         else:
             self.tsumo_seq_count = 0
@@ -53,68 +53,87 @@ class TsumoFrameDetector:
             return None
 
 
+class RenFrameDetector:
+    def __init__(self, dst_dir):
+        self.dst_dir = dst_dir
+        self.mt_x_threshold = 0.6
+        self.img_x_path = 'img/x.png'
+        self.mt_x_rect = Rect(x1=116, x2=225, y1=294, y2=314)
+        self.img_x = skimage.color.rgb2gray(skimage.io.imread(self.img_x_path))
+
+    # "x" が得点領域に表示されていたら連鎖アニメーション中
+    def detect(self, img_field, f):
+        basename = os.path.basename(f)
+
+        result = skimage.feature.match_template(
+            self.mt_x_rect.crop(img_field),
+            self.img_x
+        )
+        score = np.max(result)
+        if score >= self.mt_x_threshold:
+            print('Ren:', basename, score)
+            shutil.copy(f, dst_dir + basename)
+            return { 'file': basename, 'type': 'ren', 'player': 0 }
+
+
+class YattaFrameDetector:
+    def __init__(self, dst_dir):
+        self.dst_dir = dst_dir
+        self.mt_yatta_threshold = 0.7
+        self.img_yatta_path = 'img/yatta.png'
+        self.img_yatta = skimage.color.rgb2gray(skimage.io.imread(self.img_yatta_path))
+
+    # "やった！" が表示されていたらラウンド終了
+    def detect(self, img_field, f):
+        basename = os.path.basename(f)
+
+        result = skimage.feature.match_template(img_field, self.img_yatta)
+        score = np.max(result)
+        if score >= self.mt_yatta_threshold:
+            print('Yatta:', basename, score)
+            shutil.copy(f, self.dst_dir + basename)
+            return { 'file': basename, 'type': 'eor' }
+        else:
+            return None
+
+
 class ThumbnailsAnalyzer:
     def __init__(self):
-        self.mt_x_threshold = 0.6
-        self.mt_yatta_threshold = 0.7
-        self.img_x_path = 'img/x.png'
-        self.img_yatta_path = 'img/yatta.png'
-        self.mt_x_rect = Rect(x1=116, x2=225, y1=294, y2=314)
+        pass
 
     def analyze(self, src_files, dst_dir):
-        img_x = skimage.color.rgb2gray(skimage.io.imread(self.img_x_path))
-        img_yatta = skimage.color.rgb2gray(skimage.io.imread(self.img_yatta_path))
-
-        img_field1 = None
-        img_field1_gray = None
         is_ren = False
         is_yatta = False
         result = { 'frames': [] }
         tsumo_frame_detector = TsumoFrameDetector(dst_dir=dst_dir)
+        ren_frame_detector = RenFrameDetector(dst_dir=dst_dir)
+        yatta_frame_detector = YattaFrameDetector(dst_dir=dst_dir)
 
         for f in src_files:
-            img_field0 = img_field1
-            img_field0_gray = img_field1_gray
-            img_field1 = skimage.io.imread(f) # ツモ順分析のためにカラー版も残しておく
-            img_field1_gray = skimage.color.rgb2gray(img_field1)
+            img_field = skimage.io.imread(f) # ツモ順分析のためにカラー版も残しておく
+            img_field_gray = skimage.color.rgb2gray(img_field)
             basename = os.path.basename(f)
 
-            if img_field0 is None:
-                continue
-
-            # "x" が得点領域に表示されていたら連鎖アニメーション中
-            mt_x_result = skimage.feature.match_template(
-                self.mt_x_rect.crop(img_field1_gray),
-                img_x
-            )
-            mt_x_score = np.max(mt_x_result)
-            # print('DEBUG [mt_x_score]', f, mt_x_score)
-            if mt_x_score >= self.mt_x_threshold:
-                if not is_ren:
-                    print('Ren:', basename, mt_x_score)
-                    shutil.copy(f, dst_dir + basename)
-                    result['frames'].append({ 'file': basename, 'type': 'ren', 'player': 0 })
-                    is_ren = True
-                    continue
-            else:
-                is_ren = False
-
-            # "やった！" が表示されていたらラウンド終了
-            mt_yatta_result = skimage.feature.match_template(img_field1_gray, img_yatta)
-            mt_yatta_score = np.max(mt_yatta_result)
-            if mt_yatta_score >= self.mt_yatta_threshold:
-                if not is_yatta:
-                    print('Yatta:', basename, mt_yatta_score)
-                    shutil.copy(f, dst_dir + basename)
-                    result['frames'].append({ 'file': basename, 'type': 'yatta' })
+            if not is_yatta:
+                yatta_frame = yatta_frame_detector.detect(img_field_gray, f)
+                if yatta_frame:
+                    result['frames'].append(yatta_frame)
                     is_yatta = True
                     continue
-            else:
-                is_yatta = False
 
-            tsumo_frame = tsumo_frame_detector.detect(img_field1_gray, f)
+            if not is_ren:
+                ren_frame = ren_frame_detector.detect(img_field_gray, f)
+                if ren_frame:
+                    result['frames'].append(ren_frame)
+                    is_ren = True
+                    continue
+
+            tsumo_frame = tsumo_frame_detector.detect(img_field_gray, f)
             if tsumo_frame:
                 result['frames'].append(tsumo_frame)
+                is_yatta = False
+                is_ren = False
+                continue
 
         return result
 
