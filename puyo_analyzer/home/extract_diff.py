@@ -119,15 +119,10 @@ class ThumbnailsAnalyzer:
         is_ren = { Player.P1: False, Player.P2: False }
         is_yatta = False
         result = { 'frames': [] }
+        players = (Player.P1, Player.P2)
 
-        tsumo_frame_detectors = {
-            Player.P1: TsumoFrameDetector(frame_ratio=frame_ratio, player=Player.P1),
-            Player.P2: TsumoFrameDetector(frame_ratio=frame_ratio, player=Player.P2)
-        }
-        ren_frame_detectors = {
-            Player.P1: RenFrameDetector(player=Player.P1),
-            Player.P2: RenFrameDetector(player=Player.P2)
-        }
+        tsumo_frame_detectors = { p: TsumoFrameDetector(frame_ratio=frame_ratio, player=p) for p in players }
+        ren_frame_detectors = { p: RenFrameDetector(player=p) for p in players }
         yatta_frame_detector = YattaFrameDetector()
 
         for f in src_files:
@@ -146,7 +141,7 @@ class ThumbnailsAnalyzer:
                     is_yatta = True
                     continue
 
-            for p in (Player.P1, Player.P2):
+            for p in players:
                 if not is_ren[p]:
                     ren_frame = ren_frame_detectors[p].detect(img_field_gray, f)
                     if ren_frame:
