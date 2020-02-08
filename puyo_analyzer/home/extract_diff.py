@@ -138,13 +138,33 @@ class YattaFrameDetector:
         return score
 
 
+class MemoCounter:
+    def __init__(self, memo=None):
+        self.reset(memo)
+
+    def reset(self, memo=None):
+        self.value = 0
+        self.memo = memo
+        self.frozen = False
+
+    def inc(self):
+        if not self.frozen:
+            self.value += 1
+        return self.value
+
+    def freeze(self):
+        self.value = 0
+        self.frozen = True
+
+
 class ThumbnailsAnalyzer:
-    def __init__(self):
+    def __init__(self, frame_ratio=1.0):
+        self.frame_ratio = frame_ratio
         pass
 
-    def detect(self, src_files, frame_ratio=1.0):
+    def detect(self, src_files):
         players = (Player.P1, Player.P2)
-        tsumo_frame_detectors = { p: TsumoFrameDetector(frame_ratio=frame_ratio, player=p) for p in players }
+        tsumo_frame_detectors = { p: TsumoFrameDetector(frame_ratio=self.frame_ratio, player=p) for p in players }
         ren_frame_detectors = { p: RenFrameDetector(player=p) for p in players }
         yatta_frame_detector = YattaFrameDetector()
 
@@ -172,8 +192,39 @@ class ThumbnailsAnalyzer:
 
         return result
 
+    def analyze(self, detected_data):
+        states = {
+            'global': None,
+            Player.P1: None,
+            Player.P2: None,
+        }
+        result = { 'frames': [] }
+        players = (Player.P1, Player.P2)
+        counters = {
+            p: {
+                'ren': MemoCounter(),
+                'tsumo': MemoCounter()
+            } for p in players
+        }
 
-    def analyze(self, src_files, frame_ratio=1.0):
+        for frame in detected_data['frames']:
+            for p in players:
+                f = frame['players'][p.value]
+                tsumo_counter = counters[p]['tsumo']
+                if f['tsumo'] <= 700:
+                    tsumo_counter.inc()
+                    if tsumo_counter.value >= int(8 * self.frame_ratio):
+                        f_ = tsumo_counter.memo
+                        result['frames'].append({ 'file': f_['file'], 'type': 'tsumo', 'player': p.value })
+                        tsumo_counter.freeze()
+                else:
+                    tsumo_counter.reset(memo=frame)
+
+        print(result)
+        return result
+
+
+    def analyze2(self, src_files, frame_ratio=1.0):
         is_ren = { Player.P1: False, Player.P2: False }
         is_yatta = False
         result = { 'frames': [] }
@@ -219,11 +270,12 @@ class ThumbnailsAnalyzer:
 
         return result
 
-src_files = sorted(glob.glob('/mnt/vol/30fps-02/dst*.jpg'))[:10]
-analyzer = ThumbnailsAnalyzer()
+src_files = sorted(glob.glob('/mnt/vol/30fps-02/dst*.jpg'))
+analyzer = ThumbnailsAnalyzer(frame_ratio=0.5)
 #result = analyzer.analyze(src_files=src_files, frame_ratio=0.5)
 
 detected_json_path = 'detected.json'
+analyzed_json_path = 'analyzed.json'
 
 detected_data = None
 if os.path.exists(detected_json_path):
@@ -231,7 +283,18 @@ if os.path.exists(detected_json_path):
         detected_data = json.load(f)
         print('Loaded', detected_json_path)
 else:
-    detected_data = analyzer.detect(src_files=src_files, frame_ratio=0.5)
+    detected_data = analyzer.detect(src_files=src_files)
     with open(detected_json_path, 'w') as f:
         json.dump(detected_data, f)
         print('Saved', detected_json_path)
+
+analyzed_data = analyzer.analyze(detected_data)
+with open(analyzed_json_path, 'w') as f:
+    json.dump(analyzed_data, f)
+    print('Saved', analyzed_json_path)
+for frame in analyzed_data['frames']:
+    if 'player' in frame:
+        shutil.copy(
+            '/mnt/vol/30fps-02/{}'.format(frame['file']),
+            '/mnt/vol/out/p{}-{}'.format(frame['player'], frame['file'])
+        )
