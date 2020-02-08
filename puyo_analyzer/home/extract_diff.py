@@ -208,8 +208,17 @@ class ThumbnailsAnalyzer:
         }
 
         for frame in detected_data['frames']:
+            if frame['yatta'] >= 700:
+                if states['global'] != 'yatta':
+                    for p in players:
+                        result['frames'].append({ 'file': frame['file'], 'type': 'eor', 'player': p.value })
+                        states['global'] = 'yatta'
+            else:
+                states['global'] = None
+
             for p in players:
                 f = frame['players'][p.value]
+
                 tsumo_counter = counters[p]['tsumo']
                 if f['tsumo'] <= 700:
                     tsumo_counter.inc()
@@ -217,10 +226,24 @@ class ThumbnailsAnalyzer:
                         f_ = tsumo_counter.memo
                         result['frames'].append({ 'file': f_['file'], 'type': 'tsumo', 'player': p.value })
                         tsumo_counter.freeze()
+                        states[p] = None
                 else:
                     tsumo_counter.reset(memo=frame)
 
-        print(result)
+                # ren が終わった判定をするために、x 表示が終わった後のフレーム数を数える
+                ren_counter = counters[p]['ren']
+                if f['ren'] >= 600:
+                    if states[p] != 'ren':
+                        result['frames'].append({ 'file': frame['file'], 'type': 'ren', 'player': p.value })
+                        ren_counter.reset()
+                    states[p] = 'ren'
+                else:
+                    if states[p] == 'ren':
+                        ren_counter.inc()
+                        if ren_counter.value >= int(8 * self.frame_ratio):
+                            states[p] = None
+
+
         return result
 
 
