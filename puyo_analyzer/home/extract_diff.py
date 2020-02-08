@@ -8,6 +8,7 @@ import glob
 import os
 import shutil
 from enum import Enum
+import json
 
 class Rect:
     def __init__(self, y1, y2, x1, x2):
@@ -20,8 +21,8 @@ class Rect:
         return img[self.y1:self.y2, self.x1:self.x2]
 
 class Player(Enum):
-    P1 = 1
-    P2 = 2
+    P1 = 0
+    P2 = 1
 
 class TsumoFrameDetector:
     def __init__(self, frame_ratio, player):
@@ -63,6 +64,19 @@ class TsumoFrameDetector:
             self.keyframe_path = f
             return None
 
+    def detect_diff(self, img_field):
+        if self.img_field_prev is None:
+            self.img_field_prev = img_field
+            return 0.0
+
+        (score, diff) = skimage.metrics.structural_similarity(
+            self.mt_tsumo_rect.crop(self.img_field_prev),
+            self.mt_tsumo_rect.crop(img_field),
+            full=True
+        )
+        self.img_field_prev = img_field
+        return score
+
 
 class RenFrameDetector:
     def __init__(self, player):
@@ -91,6 +105,14 @@ class RenFrameDetector:
             print('Ren:', basename, self.player.value, score)
             return { 'file': basename, 'type': 'ren', 'player': self.player.value }
 
+    def detect_x(self, img_field):
+        result = skimage.feature.match_template(
+            self.mt_x_rect.crop(img_field),
+            self.img_x
+        )
+        score = np.max(result)
+        return score
+
 
 class YattaFrameDetector:
     def __init__(self):
@@ -110,10 +132,46 @@ class YattaFrameDetector:
         else:
             return None
 
+    def detect_yatta(self, img_field):
+        result = skimage.feature.match_template(img_field, self.img_yatta)
+        score = np.max(result)
+        return score
+
 
 class ThumbnailsAnalyzer:
     def __init__(self):
         pass
+
+    def detect(self, src_files, frame_ratio=1.0):
+        players = (Player.P1, Player.P2)
+        tsumo_frame_detectors = { p: TsumoFrameDetector(frame_ratio=frame_ratio, player=p) for p in players }
+        ren_frame_detectors = { p: RenFrameDetector(player=p) for p in players }
+        yatta_frame_detector = YattaFrameDetector()
+
+        result = { 'frames': [] }
+
+        for f in src_files:
+            frame = { 'file': os.path.basename(f) }
+            img_field = skimage.io.imread(f) # ツモ順分析のためにカラー版も残しておく
+            # 640x360(原寸の半分)じゃないと今のところ動かない(テンプレがそのサイズのため)
+            if img_field.shape[1] != 640:
+                img_field = skimage.transform.resize(img_field, (360, 640))
+            img_field_gray = skimage.color.rgb2gray(img_field)
+
+            frame['yatta'] = int(yatta_frame_detector.detect_yatta(img_field_gray) * 1000)
+
+            frame['players'] = [
+                {
+                    'ren': int(ren_frame_detectors[p].detect_x(img_field_gray) * 1000),
+                    'tsumo': int(tsumo_frame_detectors[p].detect_diff(img_field_gray) * 1000)
+                } for p in players
+            ]
+
+            result['frames'].append(frame)
+            print(frame)
+
+        return result
+
 
     def analyze(self, src_files, frame_ratio=1.0):
         is_ren = { Player.P1: False, Player.P2: False }
@@ -161,8 +219,19 @@ class ThumbnailsAnalyzer:
 
         return result
 
-src_files = sorted(glob.glob('/mnt/vol/30fps-02/dst*.jpg'))
+src_files = sorted(glob.glob('/mnt/vol/30fps-02/dst*.jpg'))[:10]
 analyzer = ThumbnailsAnalyzer()
-result = analyzer.analyze(src_files=src_files, frame_ratio=0.5)
+#result = analyzer.analyze(src_files=src_files, frame_ratio=0.5)
 
-print(result)
+detected_json_path = 'detected.json'
+
+detected_data = None
+if os.path.exists(detected_json_path):
+    with open(detected_json_path, 'r') as f:
+        detected_data = json.load(f)
+        print('Loaded', detected_json_path)
+else:
+    detected_data = analyzer.detect(src_files=src_files, frame_ratio=0.5)
+    with open(detected_json_path, 'w') as f:
+        json.dump(detected_data, f)
+        print('Saved', detected_json_path)
