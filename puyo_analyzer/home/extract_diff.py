@@ -120,18 +120,20 @@ class ThumbnailsAnalyzer:
         is_yatta = False
         result = { 'frames': [] }
         players = (Player.P1, Player.P2)
+        #players = (Player.P1,)
+        skip_flag = True
 
         tsumo_frame_detectors = { p: TsumoFrameDetector(frame_ratio=frame_ratio, player=p) for p in players }
         ren_frame_detectors = { p: RenFrameDetector(player=p) for p in players }
         yatta_frame_detector = YattaFrameDetector()
 
         for f in src_files:
+            basename = os.path.basename(f)
             img_field = skimage.io.imread(f) # ツモ順分析のためにカラー版も残しておく
             # 640x360(原寸の半分)じゃないと今のところ動かない(テンプレがそのサイズのため)
             if img_field.shape[1] != 640:
                 img_field = skimage.transform.resize(img_field, (360, 640))
             img_field_gray = skimage.color.rgb2gray(img_field)
-            basename = os.path.basename(f)
 
             if not is_yatta:
                 # TODO 数フレーム yatta を表示しないと次のフェーズにいかないようにする
@@ -142,20 +144,19 @@ class ThumbnailsAnalyzer:
                     continue
 
             for p in players:
-                if not is_ren[p]:
-                    ren_frame = ren_frame_detectors[p].detect(img_field_gray, f)
-                    if ren_frame:
+                ren_frame = ren_frame_detectors[p].detect(img_field_gray, f)
+                if ren_frame:
+                    if not is_ren[p]:
                         result['frames'].append(ren_frame)
                         is_ren[p] = True
                         continue
+                else:
+                    is_ren[p] = False
 
                 # TODO ラウンド開始の判定
                 tsumo_frame = tsumo_frame_detectors[p].detect(img_field_gray, f)
                 if tsumo_frame:
                     result['frames'].append(tsumo_frame)
-                    if is_yatta:
-                        is_yatta = False
-                    is_ren[p] = False
                     continue
 
         return result
