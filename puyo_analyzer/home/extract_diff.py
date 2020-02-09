@@ -79,10 +79,36 @@ class YattaFrameDetector:
     def __init__(self):
         self.img_yatta_path = 'img/yatta.png'
         self.img_yatta = skimage.color.rgb2gray(skimage.io.imread(self.img_yatta_path))
+        self.mt_yatta_rects = [
+            Rect(x1=96, x2=210, y1=132, y2=160),
+            Rect(x1=430, x2=544, y1=132, y2=160)
+        ]
 
     # "やった！" が表示されていたらラウンド終了
     def detect_yatta(self, img_field):
-        result = skimage.feature.match_template(img_field, self.img_yatta)
+        scores = []
+        for rect in self.mt_yatta_rects:
+            result = skimage.feature.match_template(
+                rect.crop(img_field),
+                self.img_yatta
+            )
+            result = skimage.feature.match_template(img_field, self.img_yatta)
+            scores.append(np.max(result))
+        return np.max(scores)
+
+
+class WinFrameDetector:
+    def __init__(self):
+        self.img_win_path = 'img/win.png'
+        self.img_win = skimage.color.rgb2gray(skimage.io.imread(self.img_win_path))
+        self.mt_win_rect = Rect(x1=309, x2=332, y1=324, y2=335)
+
+    # WIN の文字が画面中央下に表示されていたらゲーム中
+    def detect_win(self, img_field):
+        result = skimage.feature.match_template(
+            self.mt_win_rect.crop(img_field),
+            self.img_win
+        )
         score = np.max(result)
         return score
 
@@ -116,6 +142,7 @@ class ThumbnailsAnalyzer:
         tsumo_frame_detectors = { p: TsumoFrameDetector(frame_ratio=self.frame_ratio, player=p) for p in players }
         ren_frame_detectors = { p: RenFrameDetector(player=p) for p in players }
         yatta_frame_detector = YattaFrameDetector()
+        win_frame_detector = WinFrameDetector()
 
         result = { 'frames': [] }
 
@@ -128,6 +155,8 @@ class ThumbnailsAnalyzer:
             img_field_gray = skimage.color.rgb2gray(img_field)
 
             frame['yatta'] = int(yatta_frame_detector.detect_yatta(img_field_gray) * 1000)
+
+            frame['win'] = int(win_frame_detector.detect_win(img_field_gray) * 1000)
 
             frame['players'] = [
                 {
@@ -144,6 +173,7 @@ class ThumbnailsAnalyzer:
     def analyze(self, detected_data):
         states = {
             'global': None,
+            'ingame': False,
             Player.P1: None,
             Player.P2: None,
         }
@@ -157,6 +187,16 @@ class ThumbnailsAnalyzer:
         }
 
         for frame in detected_data['frames']:
+            if frame['win'] >= 800:
+                if not states['ingame']:
+                    # 試合開始
+                    states['ingame'] = True
+            else:
+                if states['ingame']:
+                    # 試合終了
+                    states['ingame'] = False
+                continue
+
             if frame['yatta'] >= 700:
                 if states['global'] != 'yatta':
                     for p in players:
@@ -169,7 +209,7 @@ class ThumbnailsAnalyzer:
                 f = frame['players'][p.value]
 
                 tsumo_counter = counters[p]['tsumo']
-                if f['tsumo'] <= 700:
+                if f['tsumo'] <= 700 and states['ingame']:
                     tsumo_counter.inc()
                     if tsumo_counter.value >= int(8 * self.frame_ratio):
                         f_ = tsumo_counter.memo
