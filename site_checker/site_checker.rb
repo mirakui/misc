@@ -91,6 +91,10 @@ class SiteChecker
   def start
     slack_post "Started #{$0} at #{Socket.gethostname}, pid=##{Process.pid}, revision=#{revision}"
     agent = Mechanize.new
+    agent.request_headers = {
+      'accept-language' => 'en,ja;q=0.9',
+      'user-agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/82.0.4076.0 Safari/537.36'
+    }
     loop do
       crawl_sites agent
       sleep @interval
@@ -123,39 +127,7 @@ end.parse!
 
 checker = SiteChecker.new options
 
-checker.add_site(name: 'yodobashi スプラトゥーン2セット', uri: 'http://www.yodobashi.com/product/100000001003570628/') do |page|
+checker.add_site(name: 'yodobashi', uri: 'https://www.yodobashi.com/product/100000001005138030/') do |page|
   page.css('#js_buyBoxMain .salesInfo p').text
-end
-checker.add_site(name: 'yodobashi ネオン', uri: 'http://www.yodobashi.com/product/100000001003431566/') do |page|
-  page.css('#js_buyBoxMain .salesInfo p').text
-end
-checker.add_site(name: 'yodobashi グレー', uri: 'http://www.yodobashi.com/product/100000001003431565/') do |page|
-  page.css('#js_buyBoxMain .salesInfo p').text
-end
-checker.add_site(name: 'My Nintendo カスタム本体', uri: 'https://store.nintendo.co.jp/customize.html') do |page|
-  stock = nil
-  page.css('.items').each do |item|
-    k, v = item.text.split('/')
-    if k == 'HAC_S_KAYAA'
-      stock = v
-      break
-    end
-  end
-  "在庫: #{stock}"
-end
-#checker.add_site(name: 'joshinweb グレー', uri: 'http://joshinweb.jp/game/40518/4902370535709.html') do |page|
-#  page.css('form[name="cart_button"]').text
-#end
-#checker.add_site(name: 'joshinweb ネオン', uri: 'http://joshinweb.jp/game/40518/4902370535716.html') do |page|
-#  page.css('form[name="cart_button"]').text
-#end
-checker.add_site(name: '7net スプラトゥーン2セット', uri: 'http://7net.omni7.jp/detail/2110599526') do |page|
-  page.css('.cartBtn input[type="submit"]')&.first&.attr('value')
-end
-checker.add_site(name: '7net グレー', uri: 'http://7net.omni7.jp/detail/2110596901') do |page|
-  page.css('.cartBtn input[type="submit"]')&.first&.attr('value')
-end
-checker.add_site(name: '7net ネオン', uri: 'http://7net.omni7.jp/detail/2110595637') do |page|
-  page.css('.cartBtn input[type="submit"]')&.first&.attr('value')
 end
 checker.start
