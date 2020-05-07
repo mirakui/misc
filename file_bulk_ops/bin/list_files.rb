@@ -45,7 +45,7 @@ class Main
 
         if child_path.directory?
           file_attrs['is_dir'] = 1
-          child_files = scan_dir(child_path.to_s, out_file)
+          child_files = scan_dir(child_path.to_s, out_file, error_file)
           child_size = child_files.sum {|f| f['size']}
           file_attrs['size'] = child_size
         else
