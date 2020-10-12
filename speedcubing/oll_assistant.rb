@@ -42,7 +42,7 @@ class LastLayer
             UNICODE_SQUARE_LEFT
           when 14..16
             UNICODE_SQUARE_TOP
-          when 17..18
+          when 17..19
             UNICODE_SQUARE_RIGHT
           else
             UNICODE_SQUARE
@@ -117,13 +117,34 @@ rotate_y = Transition.new(Transition::ROTATE_Y)
 olls = OLLTransitions.new(OLL_TRANSISIONS_FILE)
 oll_states = OLLStates.new(OLL_STATES_FILE)
 
-puts layer
-puts oll_states.find_index(layer).inspect
-puts layer = olls[1].apply(layer)
-puts oll_states.find_index(layer).inspect
-puts layer = rotate_y.apply(layer)
-puts oll_states.find_index(layer).inspect
-puts layer = rotate_y.apply(layer)
-puts oll_states.find_index(layer).inspect
-puts layer = olls[2].apply(layer)
-puts oll_states.find_index(layer).inspect
+# puts layer
+# puts oll_states.find_index(layer).inspect
+# puts layer = olls[1].apply(layer)
+# puts oll_states.find_index(layer).inspect
+# puts layer = rotate_y.apply(layer)
+# puts oll_states.find_index(layer).inspect
+# puts layer = rotate_y.apply(layer)
+# puts oll_states.find_index(layer).inspect
+# puts layer = olls[2].apply(layer)
+# puts oll_states.find_index(layer).inspect
+
+answers = []
+(0..57).each do |state_i|
+  layer = oll_states[state_i]
+  4.times do |y|
+    layer = rotate_y.apply(layer) if y >= 1
+    (1..57).each do |oll_i|
+      oll = olls[oll_i]
+      layer_after = oll.apply(layer)
+      after_idx = oll_states.find_index(layer_after)
+      unless after_idx
+        puts layer_after
+      end
+      # puts "State(#{state_i}) * y#{y} * OLL(#{oll_i}) = State(#{after_idx})"
+      answers[after_idx] ||= []
+      answers[after_idx] << "State(#{state_i}) * y#{y} * OLL(#{oll_i}) = State(#{after_idx})"
+    end
+  end
+end
+
+puts answers[1]
