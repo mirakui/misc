@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 OLL_TRANSISIONS_FILE = 'data/oll_transitions.csv'
 OLL_STATES_FILE = 'data/oll_states.csv'
 
@@ -110,23 +112,18 @@ class OLLTransitions
   end
 end
 
+oll_num = ARGV.shift
+if oll_num
+  oll_num = oll_num.to_i
+else
+  abort "Usage: #{$0} <OLL num>"
+end
 
 layer = LastLayer.new(LastLayer::SOLVED)
 
 rotate_y = Transition.new(Transition::ROTATE_Y)
 olls = OLLTransitions.new(OLL_TRANSISIONS_FILE)
 oll_states = OLLStates.new(OLL_STATES_FILE)
-
-# puts layer
-# puts oll_states.find_index(layer).inspect
-# puts layer = olls[1].apply(layer)
-# puts oll_states.find_index(layer).inspect
-# puts layer = rotate_y.apply(layer)
-# puts oll_states.find_index(layer).inspect
-# puts layer = rotate_y.apply(layer)
-# puts oll_states.find_index(layer).inspect
-# puts layer = olls[2].apply(layer)
-# puts oll_states.find_index(layer).inspect
 
 answers = []
 (0..57).each do |state_i|
@@ -142,9 +139,10 @@ answers = []
       end
       # puts "State(#{state_i}) * y#{y} * OLL(#{oll_i}) = State(#{after_idx})"
       answers[after_idx] ||= []
-      answers[after_idx] << "State(#{state_i}) * y#{y} * OLL(#{oll_i}) = State(#{after_idx})"
+      answers[after_idx] << "State(#{after_idx}) = State(#{state_i}) * y#{y} * OLL(#{oll_i})"
     end
   end
 end
 
-puts answers[1]
+puts answers[oll_num]
+
