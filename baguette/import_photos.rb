@@ -5,7 +5,7 @@ require 'net/http'
 require 'logger'
 
 SRC_DIR = '/mnt/sd'
-DST_DIR = "#{ENV['HOME']}/photos"
+DST_DIR = "#{ENV['HOME']}/share/photos"
 FILE_TYPES = %w[JPG MP4 MOV RAF RAW]
 DAYS_LIMIT = 30
 
