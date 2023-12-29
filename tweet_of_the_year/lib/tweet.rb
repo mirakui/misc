@@ -25,14 +25,20 @@ class Tweet
     tweet_result["legacy"]["favorite_count"].to_i
   end
 
+  def permalink_url
+    "https://twitter.com/#{user_screen_name}/status/#{tweet_result["legacy"]["id_str"]}"
+  end
+
   def created_at
     Time.parse tweet_result["legacy"]["created_at"]
-  rescue
-    puts File.write("error.json", JSON.pretty_generate(tweet_result))
   end
 
   def is_quote_status?
     tweet_result["legacy"]["is_quote_status"]
+  end
+
+  def has_in_reply_to_status_id?
+    tweet_result["legacy"].key?("in_reply_to_status_id")
   end
 
   def user_result
@@ -53,5 +59,9 @@ class Tweet
 
   def user_following?
     user_result["legacy"]["following"]
+  end
+
+  def user_protected?
+    user_result["legacy"]["protected"]
   end
 end
