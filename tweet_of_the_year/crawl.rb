@@ -1,7 +1,6 @@
-require 'time'
 require 'uri'
 require 'net/http'
-require 'json'
+require_relative './lib/likes_response'
 
 OUT_DIR = File.expand_path("../out", __FILE__)
 USER_ID = 6022992
@@ -84,57 +83,6 @@ class CurlCommand
   end
 end
 
-class LikesResponse
-  attr_reader :body_str, :json
-
-  def initialize(body_str)
-    @body_str = body_str
-    @json = JSON.parse(body_str)
-  end
-
-  def self.from_file(path)
-    body = File.read(path)
-    LikesResponse.new(body)
-  end
-
-  def save(path)
-    open(path, "w+") do |f|
-      f.write(body_str)
-    end
-  end
-
-  def entries
-    @entries ||= @json["data"]["user"]["result"]["timeline_v2"]["timeline"]["instructions"][0]["entries"]
-  end
-
-  def next_cursor
-    entry = entries.find do |entry|
-      entry["content"]["entryType"] == "TimelineTimelineCursor" && entry["content"]["cursorType"] == "Bottom"
-    end
-    entry["content"]["value"]
-  end
-
-  def oldest_tweet_created_at
-    entries.map {|entry|
-      Tweet.new(entry)
-    }.select {|tweet|
-      tweet.is_normal_tweet?
-    }.map {|tweet|
-      tweet.created_at
-    }.min
-  end
-
-  def all_tweets_are_old?
-    entries.map {|entry|
-      Tweet.new(entry)
-    }.select {|tweet|
-      tweet.is_normal_tweet?
-    }.all? {|tweet|
-      tweet.created_at.year < YEAR
-    }
-  end
-end
-
 class RateLimit
   attr_reader :limit, :remaining, :reset
 
@@ -149,61 +97,6 @@ class RateLimit
     remaining = http_response["x-rate-limit-remaining"].to_i
     reset = Time.at(http_response["x-rate-limit-reset"].to_i)
     RateLimit.new limit, remaining, reset
-  end
-end
-
-class Tweet
-  def initialize(entry)
-    @entry = entry
-  end
-
-  def is_normal_tweet?
-    @entry["content"]["entryType"] == "TimelineTimelineItem" &&
-      @entry["content"]["itemContent"]["itemType"] == "TimelineTweet" &&
-      @entry["content"]["itemContent"]["tweet_results"]["result"].key?("legacy") &&
-      @entry["content"]["itemContent"]["tweet_results"]["result"]["legacy"]["created_at"]
-  end
-
-  def tweet_result
-    @entry["content"]["itemContent"]["tweet_results"]["result"]
-  end
-
-  def full_text
-    tweet_result["legacy"]["full_text"]
-  end
-
-  def favorite_count
-    tweet_result["legacy"]["favorite_count"].to_i
-  end
-
-  def created_at
-    Time.parse tweet_result["legacy"]["created_at"]
-  rescue
-    puts File.write("error.json", JSON.pretty_generate(tweet_result))
-  end
-
-  def is_quote_status?
-    tweet_result["legacy"]["is_quote_status"]
-  end
-
-  def user_result
-    @entry["content"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]
-  end
-
-  def user_screen_name
-    user_result["legacy"]["screen_name"]
-  end
-
-  def user_name
-    user_result["legacy"]["name"]
-  end
-
-  def user_followed_by?
-    user_result["legacy"]["followed_by"]
-  end
-
-  def user_following?
-    user_result["legacy"]["following"]
   end
 end
 
