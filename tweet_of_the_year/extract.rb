@@ -7,7 +7,7 @@ YEAR = 2023
 json_files = Dir.glob("#{OUT_DIR}/*.json")
 
 CSV do |csv|
-  csv << %w[screen_name name url favorite_count created_at full_text]
+  csv << %w[created_at url favorite_count screen_name name full_text]
   json_files.each do |json_file|
     likes_response = LikesResponse.from_file(json_file)
     likes_response.entries.each do |entry|
@@ -21,11 +21,11 @@ CSV do |csv|
          !tweet.user_protected? &&
          true
         csv << [
-          tweet.user_screen_name,
-          tweet.user_name,
+          tweet.created_at,
           tweet.permalink_url,
           tweet.favorite_count,
-          tweet.created_at,
+          tweet.user_screen_name,
+          tweet.user_name,
           tweet.full_text,
         ]
       end
