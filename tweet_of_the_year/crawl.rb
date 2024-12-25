@@ -1,53 +1,24 @@
 require 'uri'
 require 'net/http'
+require 'optparse'
+require 'fileutils'
 require_relative './lib/likes_response'
 
 OUT_DIR = File.expand_path("../out", __FILE__)
+FileUtils.mkdir_p(OUT_DIR) unless Dir.exist?(OUT_DIR)
+
 USER_ID = 6022992
-YEAR = 2023
+YEAR = 2024
 PER_PAGE = 20
 FETCH_INTERVAL_SEC = 1
 
-VARIABLES = {
-  "userId" => USER_ID.to_s,
-  "count" => PER_PAGE,
-  "includePromotedContent" => false,
-  "withClientEventToken" => false,
-  "withBirdwatchNotes" => false,
-  "withVoice" => true,
-  "withV2Timeline" => true,
-}
-
-FEATURES = {
-  "responsive_web_graphql_exclude_directive_enabled" => true,
-  "verified_phone_label_enabled" => false,
-  "creator_subscriptions_tweet_preview_api_enabled" => true,
-  "responsive_web_graphql_timeline_navigation_enabled" => true,
-  "responsive_web_graphql_skip_user_profile_image_extensions_enabled" => false,
-  "c9s_tweet_anatomy_moderator_badge_enabled" => true,
-  "tweetypie_unmention_optimization_enabled" => true,
-  "responsive_web_edit_tweet_api_enabled" => true,
-  "graphql_is_translatable_rweb_tweet_is_translatable_enabled" => true,
-  "view_counts_everywhere_api_enabled" => true,
-  "longform_notetweets_consumption_enabled" => true,
-  "responsive_web_twitter_article_tweet_consumption_enabled" => false,
-  "tweet_awards_web_tipping_enabled" => false,
-  "freedom_of_speech_not_reach_fetch_enabled" => true,
-  "standardized_nudges_misinfo" => true,
-  "tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled" => true,
-  "rweb_video_timestamps_enabled" => true,
-  "longform_notetweets_rich_text_read_enabled" => true,
-  "longform_notetweets_inline_media_enabled" => true,
-  "responsive_web_media_download_video_enabled" => false,
-  "responsive_web_enhance_cards_enabled" => false,
-}
-
 class CurlCommand
-  attr_reader :uri, :headers, :last_response
+  attr_reader :uri, :headers, :query, :last_response
 
-  def initialize(uri, headers={})
+  def initialize(uri, headers={}, query={})
     @uri = URI(uri)
     @headers = headers
+    @query = query
     @last_response = nil
   end
 
@@ -63,11 +34,18 @@ class CurlCommand
       header_line[0].split(/: /)
     end
 
-    new(uri, Hash[headers])
+    query = parse_query(URI(uri).query)
+    new(uri, Hash[headers], query)
+  end
+
+  def self.parse_query(query_str)
+    URI.decode_www_form(query_str).map do |k, v|
+      [k, JSON.parse(v)]
+    end.to_h
   end
 
   def to_s
-    "curl '#{@uri}' #{@headers}"
+    "curl '#{@uri}' \\\n#{@headers.map { |k, v| "  -H '#{k}: #{v}' \\" }.join("\n")}"
   end
 
   def do_get_request
@@ -157,15 +135,18 @@ class Crawler
   def fetch(cursor)
     uri = build_uri(cursor)
     curl_cmd = CurlCommand.new(uri, @base_curl_cmd.headers)
+    puts curl_cmd.to_s if ENV["DEBUG"]
     response = curl_cmd.do_get_request
     response
   end
 
   def build_uri(cursor)
-    variables = VARIABLES
-    variables.merge!("cursor" => cursor) if cursor
     uri = @base_curl_cmd.uri
-    uri.query = URI.encode_www_form({"variables" => variables.to_json, "features" => FEATURES.to_json})
+    variables = @base_curl_cmd.query["variables"]
+    features = @base_curl_cmd.query["features"]
+    variables.merge!("cursor" => cursor) if cursor
+
+    uri.query = URI.encode_www_form({"variables" => variables.to_json, "features" => features.to_json})
     uri
   end
 
@@ -180,8 +161,14 @@ class Crawler
   end
 end
 
-start_cursor = ARGV.shift
+options = {}
+OptionParser.new do |opts|
+  opts.on('--cursor CURSOR', 'Starting cursor') do |cursor|
+    options[:cursor] = cursor
+  end
+end.parse!
+
 base_curl_cmd = CurlCommand.parse(ARGF.read)
 
 crawler = Crawler.new(base_curl_cmd)
-crawler.start start_cursor
+crawler.start options[:cursor]
