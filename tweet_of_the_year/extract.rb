@@ -2,7 +2,6 @@ require_relative './lib/likes_response'
 require 'csv'
 
 OUT_DIR = File.expand_path("../out", __FILE__)
-YEAR = 2023
 
 json_files = Dir.glob("#{OUT_DIR}/*.json")
 
@@ -13,7 +12,7 @@ CSV do |csv|
     likes_response.entries.each do |entry|
       tweet = Tweet.new(entry)
       if tweet.is_normal_tweet? &&
-         tweet.created_at.year == YEAR &&
+         tweet.created_at.year == LikesResponse::YEAR &&
          tweet.user_followed_by? &&
          !tweet.is_quote_status? &&
          tweet.full_text !~ /^@/ &&

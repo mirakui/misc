@@ -1,6 +1,8 @@
 require_relative './tweet'
 
 class LikesResponse
+  YEAR = Time.now.year.freeze
+
   attr_reader :body_str, :json
 
   def initialize(body_str)

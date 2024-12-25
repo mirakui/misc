@@ -7,9 +7,6 @@ require_relative './lib/likes_response'
 OUT_DIR = File.expand_path("../out", __FILE__)
 FileUtils.mkdir_p(OUT_DIR) unless Dir.exist?(OUT_DIR)
 
-USER_ID = 6022992
-YEAR = 2024
-PER_PAGE = 20
 FETCH_INTERVAL_SEC = 1
 
 class CurlCommand
