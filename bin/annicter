@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require_relative '../lib/annicter'
+
+def main
+  access_token = ENV['ANNICT_ACCESS_TOKEN']
+  
+  if access_token.nil? || access_token.empty?
+    puts "Error: ANNICT_ACCESS_TOKEN environment variable is not set."
+    puts "Please set your Annict API access token in the .env file or as an environment variable."
+    puts "You can get your token from: https://annict.com/settings/apps"
+    exit 1
+  end
+
+  begin
+    client = Annicter::Client.new(access_token)
+    
+    # Test connection
+    unless client.test_connection
+      puts "Error: Invalid access token or unable to connect to Annict API."
+      exit 1
+    end
+    
+    current_season = Annicter::Season.current
+    puts "今期（#{current_season}）の視聴中アニメ:"
+    puts "=" * 50
+    
+    works = client.watching_works
+    
+    if works.empty?
+      puts "視聴中のアニメはありません。"
+    else
+      works.each_with_index do |work, index|
+        puts "\n#{index + 1}. #{work}"
+        puts "-" * 50 if index < works.size - 1
+      end
+      
+      puts "\n\n合計: #{works.size}作品"
+    end
+    
+  rescue Annicter::Error => e
+    puts "Error: #{e.message}"
+    exit 1
+  rescue StandardError => e
+    puts "Unexpected error: #{e.message}"
+    puts e.backtrace if ENV['DEBUG']
+    exit 1
+  end
+end
+
+main if __FILE__ == $0
