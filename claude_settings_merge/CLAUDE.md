@@ -1,11 +1,22 @@
 # Claude Settings Merge Tool
 
 ## Overview
-A Ruby script that finds all `.claude/settings.local.json` files in subdirectories, extracts their permission lists, merges them (removing duplicates), and outputs a consolidated JSON to stdout.
+A tool (available in Ruby and Rust) that finds all `.claude/settings.local.json` files in subdirectories, extracts their permission lists, merges them (removing duplicates), and outputs a consolidated JSON to stdout.
 
 ## Usage
+
+### Ruby version
 ```bash
 ruby merge_claude_settings.rb [options] [directory]
+```
+
+### Rust version
+```bash
+# Build
+cargo build --release
+
+# Run
+./target/release/merge_claude_settings [options] [directory]
 ```
 
 Options:
@@ -44,3 +55,4 @@ Options:
 - [x] Fix JSON structure to use nested permissions object
 - [x] Add sorting to allow and deny lists
 - [x] Test sorting functionality
+- [x] スクリプトをrustにして (Rewrite script in Rust)

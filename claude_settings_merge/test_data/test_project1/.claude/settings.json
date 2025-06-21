@@ -1,4 +1,0 @@
-{
-  "allow": ["*.py", "*.rb", "*.js"],
-  "deny": ["node_modules", ".git", "*.log"]
-}
