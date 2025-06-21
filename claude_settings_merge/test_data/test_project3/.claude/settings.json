@@ -1,0 +1,4 @@
+{
+  "allow": ["*.py", "*.tsx"],
+  "deny": ["__pycache__", "*.log"]
+}

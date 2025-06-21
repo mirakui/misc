@@ -1,0 +1,4 @@
+{
+  "allow": ["*.rb", "*.go", "*.md"],
+  "deny": ["vendor", ".git", "*.tmp"]
+}
