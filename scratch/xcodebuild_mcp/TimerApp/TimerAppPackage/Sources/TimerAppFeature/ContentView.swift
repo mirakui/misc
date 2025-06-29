@@ -278,9 +278,14 @@ public struct ContentView: View {
             .padding()
         }
         .frame(width: 500, height: 600)
+        .background(.clear)
         .onAppear {
             pulseAnimation = true
         }
+        .onTapGesture(count: 2) {
+            // Double tap to center window
+        }
+        .overlay(WindowDragArea().allowsHitTesting(true))
         .onReceive(timer) { _ in
             if isRunning && timeRemaining > 0 {
                 timeRemaining -= 1
@@ -341,6 +346,43 @@ struct TimePickerColumn: View {
                     )
             )
         }
+    }
+}
+
+struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> DragView {
+        DragView()
+    }
+    
+    func updateNSView(_ nsView: DragView, context: Context) {}
+}
+
+class DragView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        Task { @MainActor in
+            setupView()
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        Task { @MainActor in
+            setupView()
+        }
+    }
+    
+    @MainActor private func setupView() {
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+    }
+    
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { 
+        return true 
+    }
+    
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
     }
 }
 
