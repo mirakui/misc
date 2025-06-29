@@ -285,7 +285,8 @@ public struct ContentView: View {
         .onTapGesture(count: 2) {
             // Double tap to center window
         }
-        .overlay(WindowDragArea().allowsHitTesting(true))
+        .background(WindowDragArea())
+        .focusEffectDisabled()
         .onReceive(timer) { _ in
             if isRunning && timeRemaining > 0 {
                 timeRemaining -= 1
@@ -382,7 +383,13 @@ class DragView: NSView {
     }
     
     override func mouseDown(with event: NSEvent) {
-        window?.performDrag(with: event)
+        // ボタンなどのUI要素がない場所のみドラッグを許可
+        let locationInView = convert(event.locationInWindow, from: nil)
+        if let hitTest = self.hitTest(locationInView), hitTest == self {
+            window?.performDrag(with: event)
+        } else {
+            super.mouseDown(with: event)
+        }
     }
 }
 
