@@ -1,0 +1,175 @@
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# dependencies = [
+#   "google-auth==2.32.0",
+#   "google-auth-oauthlib==1.2.0", 
+#   "google-auth-httplib2==0.2.0",
+#   "google-api-python-client==2.137.0",
+#   "python-dateutil==2.9.0",
+# ]
+# ///
+import os
+import sys
+import argparse
+import datetime
+from dateutil import parser, tz
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+
+def authenticate():
+    """Google Calendar APIの認証"""
+    creds = None
+    token_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'token.json')
+    creds_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json')
+    
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+    
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            if not os.path.exists(creds_path):
+                print("Error: credentials.json not found. Please set up Google Calendar API credentials.")
+                print("See README_SETUP.md for instructions.")
+                sys.exit(1)
+            
+            flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
+            creds = flow.run_local_server(port=0)
+        
+        with open(token_path, 'w') as token:
+            token.write(creds.to_json())
+    
+    return creds
+
+def get_busy_times(service, time_min, time_max):
+    """指定期間の予定を取得"""
+    try:
+        events_result = service.events().list(
+            calendarId='primary',
+            timeMin=time_min.isoformat(),
+            timeMax=time_max.isoformat(),
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+        
+        events = events_result.get('items', [])
+        busy_times = []
+        
+        for event in events:
+            if 'dateTime' in event['start']:
+                start = parser.parse(event['start']['dateTime'])
+                end = parser.parse(event['end']['dateTime'])
+                busy_times.append((start, end))
+        
+        return busy_times
+    except HttpError as error:
+        print(f'An error occurred: {error}')
+        return []
+
+def is_weekday(date):
+    """平日かどうかをチェック (月曜=0, 日曜=6)"""
+    return date.weekday() < 5
+
+def is_time_slot_free(date, start_hour, end_hour, busy_times):
+    """指定日の指定時間帯が空いているかチェック"""
+    slot_start = date.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+    slot_end = date.replace(hour=end_hour, minute=0, second=0, microsecond=0)
+    
+    for busy_start, busy_end in busy_times:
+        # 予定が時間帯と重なっているかチェック
+        if busy_start < slot_end and busy_end > slot_start:
+            return False
+    
+    return True
+
+def parse_time_range(time_str):
+    """時間範囲文字列をパース (例: '19-21' -> (19, 21))"""
+    try:
+        start, end = time_str.split('-')
+        return int(start), int(end)
+    except:
+        raise argparse.ArgumentTypeError(f"Invalid time format: {time_str}. Use format like '19-21'")
+
+def find_free_slots(start_hour, end_hour, weekday_only, limit):
+    """空き時間を検索"""
+    try:
+        creds = authenticate()
+        service = build('calendar', 'v3', credentials=creds)
+        
+        # タイムゾーンを取得
+        jst = tz.gettz('Asia/Tokyo')
+        now = datetime.datetime.now(jst)
+        
+        # 検索期間を設定（今日から60日間）
+        search_end = now + datetime.timedelta(days=60)
+        
+        # この期間の予定を取得
+        busy_times = get_busy_times(service, now, search_end)
+        
+        free_days = []
+        current_date = now.date()
+        
+        while len(free_days) < limit and current_date <= search_end.date():
+            # 平日のみオプションが有効な場合はスキップ
+            if weekday_only and not is_weekday(current_date):
+                current_date += datetime.timedelta(days=1)
+                continue
+            
+            # 今日の場合は現在時刻以降をチェック
+            if current_date == now.date() and now.hour >= end_hour:
+                current_date += datetime.timedelta(days=1)
+                continue
+            
+            # 指定時間帯が空いているかチェック
+            check_date = datetime.datetime.combine(current_date, datetime.time.min).replace(tzinfo=jst)
+            if is_time_slot_free(check_date, start_hour, end_hour, busy_times):
+                free_days.append(current_date)
+            
+            current_date += datetime.timedelta(days=1)
+        
+        return free_days
+        
+    except HttpError as error:
+        print(f'An error occurred: {error}')
+        return []
+
+def format_japanese_date(date):
+    """日付を日本語形式にフォーマット"""
+    weekdays = ['月', '火', '水', '木', '金', '土', '日']
+    weekday = weekdays[date.weekday()]
+    return f"{date.month}月{date.day}日({weekday})"
+
+def main():
+    parser = argparse.ArgumentParser(description='Google Calendarから空き時間を検索')
+    parser.add_argument('--weekday', action='store_true', 
+                        help='平日のみを検索')
+    parser.add_argument('--time', type=parse_time_range, default='9-18',
+                        help='時間帯を指定 (例: 19-21)')
+    parser.add_argument('--limit', type=int, default=3,
+                        help='表示する候補数 (デフォルト: 3)')
+    
+    args = parser.parse_args()
+    start_hour, end_hour = args.time
+    
+    # 時間範囲の妥当性チェック
+    if start_hour >= end_hour or start_hour < 0 or end_hour > 24:
+        print("Error: Invalid time range")
+        sys.exit(1)
+    
+    # 空き時間を検索
+    free_slots = find_free_slots(start_hour, end_hour, args.weekday, args.limit)
+    
+    if free_slots:
+        for date in free_slots:
+            print(format_japanese_date(date))
+    else:
+        print("指定条件に合う空き時間が見つかりませんでした。")
+
+if __name__ == '__main__':
+    main()
