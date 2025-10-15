@@ -1,11 +1,36 @@
 #!/usr/bin/env ruby
 
 require 'bundler/setup'
+require 'optparse'
 require_relative '../lib/annicter'
 
+def parse_options
+  options = {}
+
+  parser = OptionParser.new do |opts|
+    opts.banner = "Usage: annicter [options]"
+    opts.separator ""
+    opts.separator "Options:"
+
+    opts.on("-s", "--season SEASON", "Specify season in YYYY-SEASON format (e.g., 2025-summer, 2024-winter)") do |season|
+      options[:season] = season
+    end
+
+    opts.on("-h", "--help", "Show this help message") do
+      puts opts
+      exit 0
+    end
+  end
+
+  parser.parse!
+  options
+end
+
 def main
+  options = parse_options
+
   access_token = ENV['ANNICT_ACCESS_TOKEN']
-  
+
   if access_token.nil? || access_token.empty?
     puts "Error: ANNICT_ACCESS_TOKEN environment variable is not set."
     puts "Please set your Annict API access token in the .env file or as an environment variable."
@@ -13,21 +38,30 @@ def main
     exit 1
   end
 
+  # Validate season format if provided
+  if options[:season] && !Annicter::Season.valid?(options[:season])
+    puts "Error: Invalid season format: #{options[:season]}"
+    puts "Season must be in YYYY-SEASON format (e.g., 2025-summer, 2024-winter)"
+    puts "Valid seasons: winter, spring, summer, autumn"
+    exit 1
+  end
+
   begin
     client = Annicter::Client.new(access_token)
-    
+
     # Test connection
     unless client.test_connection
       puts "Error: Invalid access token or unable to connect to Annict API."
       exit 1
     end
-    
-    current_season = Annicter::Season.current
-    puts "今期（#{current_season}）の視聴中アニメ:"
+
+    season = options[:season] || Annicter::Season.current
+    season_label = options[:season] ? "指定期（#{season}）" : "今期（#{season}）"
+    puts "#{season_label}の視聴中アニメ:"
     puts "=" * 50
-    
-    works = client.watching_works
-    
+
+    works = client.watching_works(season)
+
     if works.empty?
       puts "視聴中のアニメはありません。"
     else
@@ -35,10 +69,10 @@ def main
         puts "\n#{index + 1}. #{work}"
         puts "-" * 50 if index < works.size - 1
       end
-      
+
       puts "\n\n合計: #{works.size}作品"
     end
-    
+
   rescue Annicter::Error => e
     puts "Error: #{e.message}"
     exit 1

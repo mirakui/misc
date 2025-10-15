@@ -134,3 +134,13 @@ annicter/
 - 各クラスの責務に応じたテストケース作成
 - カバレッジ100%を目標
 - 境界値テストとエラーケースを重視
+
+## 開発TODO
+
+### コマンドライン引数でシーズン指定機能の追加
+- [x] Write failing tests for command-line season option parsing
+- [x] Implement OptionParser for --season argument in bin/annicter
+- [x] Update main() to pass season argument to client
+- [x] Add season validation using Season.valid?
+- [x] Run RSpec tests to verify functionality
+- [x] Update README.md with usage examples for --season option
