@@ -16,6 +16,10 @@ def parse_options
       options[:season] = season
     end
 
+    opts.on("--simple", "Output only titles in newline-separated format") do
+      options[:simple] = true
+    end
+
     opts.on("-h", "--help", "Show this help message") do
       puts opts
       exit 0
@@ -56,21 +60,29 @@ def main
     end
 
     season = options[:season] || Annicter::Season.current
-    season_label = options[:season] ? "指定期（#{season}）" : "今期（#{season}）"
-    puts "#{season_label}の視聴中アニメ:"
-    puts "=" * 50
-
     works = client.watching_works(season)
 
-    if works.empty?
-      puts "視聴中のアニメはありません。"
-    else
-      works.each_with_index do |work, index|
-        puts "\n#{index + 1}. #{work}"
-        puts "-" * 50 if index < works.size - 1
+    if options[:simple]
+      # Simple mode: output only titles, one per line
+      works.each do |work|
+        puts work.title
       end
+    else
+      # Normal mode: detailed output
+      season_label = options[:season] ? "指定期（#{season}）" : "今期（#{season}）"
+      puts "#{season_label}の視聴中アニメ:"
+      puts "=" * 50
 
-      puts "\n\n合計: #{works.size}作品"
+      if works.empty?
+        puts "視聴中のアニメはありません。"
+      else
+        works.each_with_index do |work, index|
+          puts "\n#{index + 1}. #{work}"
+          puts "-" * 50 if index < works.size - 1
+        end
+
+        puts "\n\n合計: #{works.size}作品"
+      end
     end
 
   rescue Annicter::Error => e

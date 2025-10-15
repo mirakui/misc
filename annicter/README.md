@@ -52,6 +52,24 @@ export ANNICT_ACCESS_TOKEN="your_token_here"
 - `2025-summer` (夏期: 7-9月)
 - `2025-autumn` (秋期: 10-12月)
 
+### タイトルのみを出力（シンプルモード）
+
+```bash
+./bin/annicter --simple
+```
+
+`--simple` オプションを使用すると、タイトルのみを改行区切りで出力します。
+他のスクリプトとの連携やパイプ処理に便利です。
+
+```bash
+# 特定のシーズンとシンプルモードを組み合わせる
+./bin/annicter --season 2025-summer --simple
+
+# 他のコマンドとパイプで連携
+./bin/annicter --simple | wc -l  # 視聴中のアニメ数をカウント
+./bin/annicter --simple | grep "フリーレン"  # 特定のタイトルを検索
+```
+
 ### ヘルプを表示
 
 ```bash
@@ -65,6 +83,7 @@ Usage: annicter [options]
 
 Options:
     -s, --season SEASON              Specify season in YYYY-SEASON format (e.g., 2025-summer, 2024-winter)
+        --simple                     Output only titles in newline-separated format
     -h, --help                       Show this help message
 ```
 
@@ -96,6 +115,18 @@ $ ./bin/annicter --season 2025-summer
    放送: 日曜 24:00
 
 合計: 1作品
+
+# シンプルモードで出力
+$ ./bin/annicter --simple
+葬送のフリーレン
+薬屋のひとりごと
+
+# 他のコマンドと組み合わせ
+$ ./bin/annicter --simple | wc -l
+2
+
+$ ./bin/annicter --season 2025-summer --simple
+無職転生II
 ```
 
 ## テスト

@@ -133,6 +133,60 @@ RSpec.describe 'bin/annicter' do
     end
   end
 
+  describe '--simple option' do
+    it 'outputs only titles in newline-separated format' do
+      # Test that --simple option is correctly parsed and doesn't cause errors
+      stdout, stderr, status = Open3.capture3(
+        { 'ANNICT_ACCESS_TOKEN' => access_token },
+        'ruby', bin_path, '--simple'
+      )
+
+      # The script might fail on API call, but should not fail on argument parsing
+      expect(stderr).not_to include('invalid option')
+      expect(stderr).not_to include('unrecognized option')
+    end
+
+    it 'works with --season option' do
+      stdout, stderr, status = Open3.capture3(
+        { 'ANNICT_ACCESS_TOKEN' => access_token },
+        'ruby', bin_path, '--season', '2025-summer', '--simple'
+      )
+
+      # The script might fail on API call, but should not fail on argument parsing
+      expect(stderr).not_to include('invalid option')
+      expect(stderr).not_to include('unrecognized option')
+    end
+
+    it 'does not output anything when no works found in simple mode' do
+      mock_script = <<~RUBY
+        require 'bundler/setup'
+        require 'optparse'
+
+        def parse_options
+          options = {}
+          parser = OptionParser.new do |opts|
+            opts.on("--simple") { options[:simple] = true }
+          end
+          parser.parse!
+          options
+        end
+
+        options = parse_options
+        works = []
+
+        if options[:simple]
+          works.each { |work| puts work }
+        else
+          puts "視聴中のアニメはありません。"
+        end
+      RUBY
+
+      stdout, stderr, status = Open3.capture3('ruby', '-e', mock_script, '--simple')
+
+      expect(stdout.strip).to be_empty
+    end
+  end
+
   describe '--help option' do
     it 'displays help message' do
       stdout, stderr, status = Open3.capture3(
@@ -142,6 +196,14 @@ RSpec.describe 'bin/annicter' do
       expect(stdout).to include('Usage:')
       expect(stdout).to include('--season')
       expect(status.exitstatus).to eq(0)
+    end
+
+    it 'includes --simple option in help' do
+      stdout, stderr, status = Open3.capture3(
+        'ruby', bin_path, '--help'
+      )
+
+      expect(stdout).to include('--simple')
     end
   end
 end

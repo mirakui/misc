@@ -144,3 +144,10 @@ annicter/
 - [x] Add season validation using Season.valid?
 - [x] Run RSpec tests to verify functionality
 - [x] Update README.md with usage examples for --season option
+
+### シンプル出力モード（--simpleオプション）の追加
+- [x] Write failing tests for --simple option
+- [x] Add --simple option to OptionParser
+- [x] Implement simple output mode in main()
+- [x] Run RSpec tests to verify functionality
+- [x] Update README.md with --simple option documentation
