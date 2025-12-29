@@ -46,22 +46,27 @@ class Tweet
   end
 
   def user_screen_name
-    user_result["legacy"]["screen_name"]
+    user_result.dig("core", "screen_name") ||
+      user_result.dig("legacy", "screen_name")
   end
 
   def user_name
-    user_result["legacy"]["name"]
+    user_result.dig("core", "name") ||
+      user_result.dig("legacy", "name")
   end
 
   def user_followed_by?
-    user_result["legacy"]["followed_by"]
+    user_result.dig("relationship_perspectives", "followed_by") ||
+      user_result.dig("legacy", "followed_by")
   end
 
   def user_following?
-    user_result["legacy"]["following"]
+    user_result.dig("relationship_perspectives", "following") ||
+      user_result.dig("legacy", "following")
   end
 
   def user_protected?
-    user_result["legacy"]["protected"]
+    user_result.dig("privacy", "protected") ||
+      user_result.dig("legacy", "protected")
   end
 end

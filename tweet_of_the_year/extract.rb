@@ -5,7 +5,7 @@ OUT_DIR = File.expand_path("../out", __FILE__)
 
 json_files = Dir.glob("#{OUT_DIR}/*.json")
 
-CSV do |csv|
+CSV(force_quotes: true) do |csv|
   csv << %w[created_at url favorite_count screen_name name full_text]
   json_files.each do |json_file|
     likes_response = LikesResponse.from_file(json_file)
@@ -25,7 +25,7 @@ CSV do |csv|
           tweet.favorite_count,
           tweet.user_screen_name,
           tweet.user_name,
-          tweet.full_text,
+          tweet.full_text.gsub(/\R/, ' '),
         ]
       end
     end

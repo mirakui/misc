@@ -5,7 +5,7 @@ module Annicter
 
     def initialize(access_token)
       raise ArgumentError, 'Access token is required' if access_token.nil? || access_token.empty?
-      
+
       @access_token = access_token
       @conn = Faraday.new(url: BASE_URL) do |faraday|
         faraday.request :json
@@ -18,19 +18,27 @@ module Annicter
 
     def watching_works(season = nil)
       season ||= Season.current
-      
+
       works = []
       page = 1
-      
+      total_count = nil
+
       loop do
         response = fetch_watching_works(season, page)
         page_works = Work.from_api_response(response)
         works.concat(page_works)
+
+        # Get total_count from first response
+        total_count ||= response['total_count'] || 0
+
+        # Break if we've collected all works or no more pages
+        break if works.size >= total_count || !response['next_page'] || page_works.empty?
         
-        break unless response['next_page']
         page = response['next_page']
+        # Wait before next request to avoid rate limiting
+        sleep 1
       end
-      
+
       works
     rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
       raise Error, "Network error: #{e.message}"
