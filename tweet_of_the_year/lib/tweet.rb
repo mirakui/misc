@@ -7,10 +7,11 @@ class Tweet
   end
 
   def is_normal_tweet?
+    result = @entry.dig("content", "itemContent", "tweet_results", "result")
     @entry["content"]["entryType"] == "TimelineTimelineItem" &&
       @entry["content"]["itemContent"]["itemType"] == "TimelineTweet" &&
-      @entry["content"]["itemContent"]["tweet_results"]["result"].key?("legacy") &&
-      @entry["content"]["itemContent"]["tweet_results"]["result"]["legacy"]["created_at"]
+      result&.key?("legacy") &&
+      result["legacy"]["created_at"]
   end
 
   def tweet_result
