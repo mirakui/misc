@@ -22,7 +22,8 @@ class LikesResponse
   end
 
   def entries
-    @entries ||= @json["data"]["user"]["result"]["timeline_v2"]["timeline"]["instructions"][0]["entries"]
+    timeline = @json["data"]["user"]["result"]["timeline_v2"] || @json["data"]["user"]["result"]["timeline"]
+    @entries ||= timeline["timeline"]["instructions"][0]["entries"]
   end
 
   def next_cursor

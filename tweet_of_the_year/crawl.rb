@@ -3,6 +3,7 @@ require 'net/http'
 require 'optparse'
 require 'fileutils'
 require_relative './lib/likes_response'
+require 'openssl'
 
 OUT_DIR = File.expand_path("../out", __FILE__)
 FileUtils.mkdir_p(OUT_DIR) unless Dir.exist?(OUT_DIR)
@@ -31,6 +32,11 @@ class CurlCommand
       header_line[0].split(/: /)
     end
 
+    # Parse -b (cookie) option
+    if cmd_txt =~ /-b '(?<cookies>[^']+)'/
+      headers << ['Cookie', $~[:cookies]]
+    end
+
     query = parse_query(URI(uri).query)
     new(uri, Hash[headers], query)
   end
@@ -50,7 +56,7 @@ class CurlCommand
     @headers.each do |k, v|
       request[k] = v
     end
-    @last_response = Net::HTTP.start(@uri.host, @uri.port, use_ssl: true) do |http|
+    @last_response = Net::HTTP.start(@uri.host, @uri.port, use_ssl: true, verify_mode: OpenSSL::SSL::VERIFY_NONE) do |http|
       http.request(request)
     end
 
@@ -158,14 +164,16 @@ class Crawler
   end
 end
 
-options = {}
-OptionParser.new do |opts|
-  opts.on('--cursor CURSOR', 'Starting cursor') do |cursor|
-    options[:cursor] = cursor
-  end
-end.parse!
+if __FILE__ == $0
+  options = {}
+  OptionParser.new do |opts|
+    opts.on('--cursor CURSOR', 'Starting cursor') do |cursor|
+      options[:cursor] = cursor
+    end
+  end.parse!
 
-base_curl_cmd = CurlCommand.parse(ARGF.read)
+  base_curl_cmd = CurlCommand.parse(ARGF.read)
 
-crawler = Crawler.new(base_curl_cmd)
-crawler.start options[:cursor]
+  crawler = Crawler.new(base_curl_cmd)
+  crawler.start options[:cursor]
+end
