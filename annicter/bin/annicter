@@ -60,7 +60,7 @@ def main
     end
 
     season = options[:season] || Annicter::Season.current
-    works = client.watching_works(season)
+    works = client.watched_works(season)
 
     if options[:simple]
       # Simple mode: output only titles, one per line
@@ -68,20 +68,10 @@ def main
         puts work.title
       end
     else
-      # Normal mode: detailed output
-      season_label = options[:season] ? "指定期（#{season}）" : "今期（#{season}）"
-      puts "#{season_label}の視聴中アニメ:"
-      puts "=" * 50
-
-      if works.empty?
-        puts "視聴中のアニメはありません。"
-      else
-        works.each_with_index do |work, index|
-          puts "\n#{index + 1}. #{work}"
-          puts "-" * 50 if index < works.size - 1
-        end
-
-        puts "\n\n合計: #{works.size}作品"
+      # Normal mode: Scrapbox format
+      works.each_with_index do |work, index|
+        puts "[* #{work.title}]"
+        puts "\n" if index < works.size - 1
       end
     end
 

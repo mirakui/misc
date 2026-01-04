@@ -16,7 +16,7 @@ module Annicter
       end
     end
 
-    def watching_works(season = nil)
+    def watched_works(season = nil)
       season ||= Season.current
 
       works = []
@@ -24,7 +24,7 @@ module Annicter
       total_count = nil
 
       loop do
-        response = fetch_watching_works(season, page)
+        response = fetch_watched_works(season, page)
         page_works = Work.from_api_response(response)
         works.concat(page_works)
 
@@ -53,9 +53,9 @@ module Annicter
 
     private
 
-    def fetch_watching_works(season, page)
+    def fetch_watched_works(season, page)
       response = @conn.get("/#{API_VERSION}/me/works") do |req|
-        req.params['filter_status'] = 'watching'
+        req.params['filter_status'] = 'watched'
         req.params['filter_season'] = season
         req.params['per_page'] = 50
         req.params['page'] = page

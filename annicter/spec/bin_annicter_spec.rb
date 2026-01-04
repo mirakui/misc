@@ -121,14 +121,14 @@ RSpec.describe 'bin/annicter' do
 
           options = parse_options
           season = options[:season] || Annicter::Season.current
-          season_label = options[:season] ? "指定期（\#{season}）" : "今期（\#{season}）"
-          puts "\#{season_label}の視聴中アニメ:"
+          # Output season for verification
+          puts season
         RUBY
 
         stdout, stderr, status = Open3.capture3('ruby', '-e', mock_script)
 
-        # Should mention current season (今期)
-        expect(stdout).to include('今期')
+        # Should output current season in YYYY-season format
+        expect(stdout.strip).to match(/\d{4}-(winter|spring|summer|autumn)/)
       end
     end
   end
@@ -177,7 +177,8 @@ RSpec.describe 'bin/annicter' do
         if options[:simple]
           works.each { |work| puts work }
         else
-          puts "視聴中のアニメはありません。"
+          # Scrapbox format: output nothing when no works
+          works.each { |work| puts "[* \#{work}]" }
         end
       RUBY
 

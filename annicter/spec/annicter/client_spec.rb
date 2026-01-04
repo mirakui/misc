@@ -21,7 +21,7 @@ RSpec.describe Annicter::Client do
     end
   end
 
-  describe '#watching_works' do
+  describe '#watched_works' do
     let(:api_response) do
       {
         'works' => [
@@ -46,7 +46,7 @@ RSpec.describe Annicter::Client do
       stub_request(:get, 'https://api.annict.com/v1/me/works')
         .with(
           query: hash_including(
-            'filter_status' => 'watching',
+            'filter_status' => 'watched',
             'filter_season' => '2024-winter',
             'per_page' => '50'
           ),
@@ -62,8 +62,8 @@ RSpec.describe Annicter::Client do
         )
     end
 
-    it 'fetches watching works for the specified season' do
-      works = client.watching_works('2024-winter')
+    it 'fetches watched works for the specified season' do
+      works = client.watched_works('2024-winter')
       
       expect(works).to be_an(Array)
       expect(works.size).to eq(2)
@@ -77,7 +77,7 @@ RSpec.describe Annicter::Client do
         stub_request(:get, 'https://api.annict.com/v1/me/works')
           .with(
             query: hash_including(
-              'filter_status' => 'watching',
+              'filter_status' => 'watched',
               'filter_season' => '2024-spring',
               'per_page' => '50'
             ),
@@ -94,7 +94,7 @@ RSpec.describe Annicter::Client do
       end
 
       it 'uses current season by default' do
-        works = client.watching_works
+        works = client.watched_works
         expect(works).to be_an(Array)
       end
     end
@@ -122,7 +122,7 @@ RSpec.describe Annicter::Client do
         stub_request(:get, 'https://api.annict.com/v1/me/works')
           .with(
             query: hash_including(
-              'filter_status' => 'watching',
+              'filter_status' => 'watched',
               'filter_season' => '2024-winter',
               'per_page' => '50',
               'page' => '1'
@@ -141,7 +141,7 @@ RSpec.describe Annicter::Client do
         stub_request(:get, 'https://api.annict.com/v1/me/works')
           .with(
             query: hash_including(
-              'filter_status' => 'watching',
+              'filter_status' => 'watched',
               'filter_season' => '2024-winter',
               'per_page' => '50',
               'page' => '2'
@@ -159,7 +159,7 @@ RSpec.describe Annicter::Client do
       end
 
       it 'fetches all pages' do
-        works = client.watching_works('2024-winter')
+        works = client.watched_works('2024-winter')
         expect(works.size).to eq(75)
       end
     end
@@ -172,7 +172,7 @@ RSpec.describe Annicter::Client do
       end
 
       it 'raises an error' do
-        expect { client.watching_works('2024-winter') }.to raise_error(Annicter::Error, /API request failed/)
+        expect { client.watched_works('2024-winter') }.to raise_error(Annicter::Error, /API request failed/)
       end
     end
 
@@ -184,7 +184,7 @@ RSpec.describe Annicter::Client do
       end
 
       it 'raises an error' do
-        expect { client.watching_works('2024-winter') }.to raise_error(Annicter::Error, /Network error/)
+        expect { client.watched_works('2024-winter') }.to raise_error(Annicter::Error, /Network error/)
       end
     end
   end
